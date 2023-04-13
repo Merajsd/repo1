@@ -28,35 +28,21 @@ jobs:
       run: dotnet test --no-build --verbosity normal
       
     - name: DotNet Publish
-      run: dotnet publish -c Release
-      
-    - name: Stop webapp Service
-      uses: garygrossgarten/github-action-ssh@v0.6.3
+      run: dotnet publish . -c Release -o deploy
+    - name: Copy files via ssh rsync
+      uses: trendyminds/github-actions-rsync@master
       with:
-        command: service webapp stop
-        host: ${{ secrets.REMOTE_HOST }}
-        username: ${{ secrets.REMOTE_USER }}
-        passphrase: ${{ secrets.PASSPHRASE }}
-        privateKey: ${{ secrets.REMOTE_SSH_KEY }}
-      
-    - name: Copy to Server via SCP
-      uses: garygrossgarten/github-action-scp@release
-      with:
-        local: /home/runner/work/DemoApp/DemoApp/DemoApp/bin/Release/net5.0/publish/
-        concurrency: 10
-        remote: ${{ secrets.REMOTE_TARGET }}
-        host: ${{ secrets.REMOTE_HOST }}
-        username: ${{ secrets.REMOTE_USER }}
-        passphrase: ${{ secrets.PASSPHRASE }}
-        privateKey: ${{ secrets.REMOTE_SSH_KEY }}
+        RSYNC_OPTIONS: -avzr --delete --exclude node_modules --exclude '.git*'
+        RSYNC_TARGET: ${{ secrets.REMOTE_TARGET }}
+        RSYNC_SOURCE: /deploy/
       env:
-        ASPNETCORE_ENVIRONMENT: Production
-        
-    - name: Start Service webapp Service
-      uses: garygrossgarten/github-action-ssh@v0.6.3
+        SSH_PRIVATE_KEY: ${{ secrets.REMOTE_SSH_KEY }}
+        SSH_USERNAME: ${{ secrets.REMOTE_USER }}
+        SSH_HOSTNAME: ${{ secrets.REMOTE_HOST }}   
+    - name: Run SSH command
+      uses: garygrossgarten/github-action-ssh@release
       with:
-        command: service webapp start
+        command: sudo systemctl restart project-name
         host: ${{ secrets.REMOTE_HOST }}
         username: ${{ secrets.REMOTE_USER }}
-        passphrase: ${{ secrets.PASSPHRASE }}
-        privateKey: ${{ secrets.REMOTE_SSH_KEY }}
+        privateKey: ${{ secrets.REMOTE_SSH_KEY }}
