@@ -1,48 +1,22 @@
-name: .NET Core
+name: Push-to-EC2
 
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
-
 jobs:
-  Deploy:
-
+  deploy:
+    name: Push to EC2 Instance
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Setup .NET Core
-      uses: actions/setup-dotnet@v1
-      with:
-        dotnet-version: 7.0.x
-        
-    - name: DotNet Restore
-      run: dotnet restore
-    
-    - name: DotNet Build
-      run: dotnet build --no-restore
-      
-    - name: DotNet Run Tests
-      run: dotnet test --no-build --verbosity normal
-      
-    - name: DotNet Publish
-      run: dotnet publish . -c Release -o deploy
-    - name: Copy files via ssh rsync
-      uses: trendyminds/github-actions-rsync@master
-      with:
-        RSYNC_OPTIONS: -avzr --delete --exclude node_modules --exclude '.git*'
-        RSYNC_TARGET: ${{ secrets.REMOTE_TARGET }}
-        RSYNC_SOURCE: /deploy/
-      env:
-        SSH_PRIVATE_KEY: ${{ secrets.REMOTE_SSH_KEY }}
-        SSH_USERNAME: ${{ secrets.REMOTE_USER }}
-        SSH_HOSTNAME: ${{ secrets.REMOTE_HOST }}   
-    - name: Run SSH command
-      uses: garygrossgarten/github-action-ssh@release
-      with:
-        command: sudo systemctl restart project-name
-        host: ${{ secrets.REMOTE_HOST }}
-        username: ${{ secrets.REMOTE_USER }}
-        privateKey: ${{ secrets.REMOTE_SSH_KEY }}
+      - name: Checkout the code
+        uses: actions/checkout@v1
+
+      - name: Deploy to my EC2 instance
+        uses: easingthemes/ssh-deploy@v2.1.5
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.REMOTE_SSH_KEY }}
+          SOURCE: "./"
+          REMOTE_HOST: "ip-172-31-15-97.eu-north-1.compute.internal"
+          REMOTE_USER: "ubuntu"
+          TARGET: "/var/www/html"
